@@ -5,6 +5,7 @@ import HostsTemplate from '@/templates/HostsTemplate.vue';
 import { defineProps } from 'vue';
 
 import { ref } from 'vue';
+import HostConnectTemplate from './HostConnectTemplate.vue';
 
 const groupIds = ref<string[]>([]); // 子页面展开状态
 
@@ -18,11 +19,18 @@ function handleClick(groupId: string): void {
         groupIds.value.splice(index, 1);
     }
 }
-
+// 父组件传递的 props
 const props = defineProps<{
     groupInfos?: GroupInfo[]
 }>();
 const { groupInfos } = props;
+
+
+// 新建连接信息窗口
+const hostDialogStatus = ref<boolean>(false);
+const editHostDialogStatus = (status: boolean) => {
+    hostDialogStatus.value = status;
+}
 </script>
 
 <template>
@@ -45,7 +53,7 @@ const { groupInfos } = props;
             <div class="groups-btn">
                 <!-- 新建连接 -->
                 <el-tooltip content="新建连接" placement="top">
-                    <div @click.stop="">
+                    <div @click.stop="hostDialogStatus = true">
                         <SvgIcon class="svg-btn" iconName="icon-lianjie" />
                     </div>
                 </el-tooltip>
@@ -71,7 +79,9 @@ const { groupInfos } = props;
             <HostsTemplate :hostInfos="groupInfo.groupHosts" v-if="groupIds.includes(groupInfo.groupId)" />
         </div>
     </div>
-
+    <div v-if="hostDialogStatus == true">
+        <HostConnectTemplate @editHostDialogStatus="editHostDialogStatus" />
+    </div>
 </template>
 
 <style lang="scss" scoped>
@@ -105,6 +115,7 @@ const { groupInfos } = props;
         margin-left: 20px;
         height: 40px;
         color: rgb(205, 202, 202);
+        cursor: default;
 
         .groups-name {
             height: 20px;

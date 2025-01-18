@@ -52,8 +52,8 @@ pub async fn start() {
             });
 
             // 创建 terminal 变量，保证它在整个连接生命周期内
-            let mut localTerminal: Option<LocalTerminal> = None;
-            let mut sshTerminal: Option<SshTerminal> = None;
+            let mut local_terminal: Option<LocalTerminal> = None;
+            let mut ssh_terminal: Option<SshTerminal> = None;
 
             // 处理 WebSocket 消息
             while let Some(msg) = ws_receiver.next().await {
@@ -71,27 +71,21 @@ pub async fn start() {
                                             match message_info.as_str() {
                                                 "LOCAL" => {
                                                     println!("开始创建本地终端");
-                                                    if localTerminal.is_none() {
+                                                    if local_terminal.is_none() {
                                                         // 创建终端并传入发送端
-                                                        localTerminal = Some(
+                                                        local_terminal = Some(
                                                             LocalTerminal::new(tx.clone())
                                                                 .expect("启动终端异常"),
                                                         );
-                                                        if let Some(t) = &mut localTerminal {
+                                                        if let Some(t) = &mut local_terminal {
                                                             t.execute_command("");
                                                         }
                                                     }
                                                 }
                                                 "SSH" => {
                                                     println!("开始连接ssh远程服务器");
-                                                    if sshTerminal.is_none() {
-                                                        sshTerminal = Some(
-                                                            SshTerminal::new(tx.clone())
-                                                                .expect("连接ssh服务器异常"),
-                                                        );
-                                                        if let Some(ssh) = &mut sshTerminal {
-                                                            ssh.execute_command("pwd");
-                                                        }
+                                                    if ssh_terminal.is_none() {
+                                                        ssh_terminal = Some(SshTerminal::new(tx.clone()).await.expect("连接ssh服务器异常"));
                                                     }
                                                 }
                                                 _ => {}
@@ -99,12 +93,12 @@ pub async fn start() {
                                             if message_info == "LOCAL" {}
                                         } else if message_type == "CHAT" {
                                             // 向终端发送命令
-                                            if let Some(t) = &mut localTerminal {
+                                            if let Some(t) = &mut local_terminal {
                                                 println!("开始向终端发送命令: {}", message_info);
                                                 t.execute_command(&message_info);
-                                            } else if let Some(ssh) = &mut sshTerminal {
+                                            } else if let Some(ssh) = &mut ssh_terminal {
                                                 println!("开始向终端发送命令: {}", message_info);
-                                                ssh.execute_command(&message_info);
+                                                ssh.execute_command(&message_info).await;
                                             }
                                         }
                                     }
@@ -127,11 +121,11 @@ pub async fn start() {
                         if let Err(e) = ws_sender.lock().await.close().await {
                             println!("关闭发送端时发生错误: {}", e);
                         }
-                        if let Some(t) = localTerminal {
+                        if let Some(t) = local_terminal {
                             t.close();
                         }
-                        if let Some(ssh) = sshTerminal {
-                            ssh.close();
+                        if let Some(ssh) = ssh_terminal {
+                            ssh.close().await;
                         }
                         break;
                     }

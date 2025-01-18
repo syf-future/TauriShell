@@ -69,7 +69,7 @@ onMounted(() => {
             console.log('WebSocket connected');
             const commandInfo: CommandInfo = {
                 message_type: EnumCommand.CONNECT,
-                message_info: "LOCAL"
+                message_info: "SSH"
             }
             socket.value?.send(JSON.stringify(commandInfo)); // 发送连接命令
         };

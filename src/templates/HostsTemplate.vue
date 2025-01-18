@@ -95,6 +95,7 @@ const editHostDialogStatus = (status: boolean) => {
         display: flex;
         justify-content: center;
         align-items: center;
+        cursor: default;
 
         .groups-name {
             height: 20px;
