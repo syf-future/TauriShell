@@ -33,8 +33,10 @@
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
-, "src/service/WebSocketUtil.js"  ],
+    "src/**/*.vue",
+    "src/service/WebSocketUtil.js",
+    "src/utils/StoreGroupInfoUtil.ts"
+  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

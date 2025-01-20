@@ -8,7 +8,7 @@ use tokio::sync::{mpsc, Mutex};
 
 pub struct SshTerminal {
     session: Arc<Mutex<Handle<CustomClient>>>, // SSH 客户端会话
-    input_sender: mpsc::Sender<String>,       // 用于发送命令到输入任务
+    input_sender: mpsc::Sender<String>,        // 用于发送命令到输入任务
 }
 
 impl SshTerminal {
@@ -91,7 +91,6 @@ impl SshTerminal {
             }
         });
 
-
         // 返回新的 SshTerminal 实例
         Ok(SshTerminal {
             session,
@@ -101,14 +100,23 @@ impl SshTerminal {
 
     // 异步执行命令
     pub async fn execute_command(&self, command: &str) {
-        self.input_sender.send(command.to_string()).await.expect("执行命令失败");
+        self.input_sender
+            .send(command.to_string())
+            .await
+            .expect("执行命令失败");
     }
 
     // 关闭 SSH 会话
     pub async fn close(self) {
-        self.input_sender.send("CLOSE-SSH".to_string()).await.expect("执行命令失败");
+        self.input_sender
+            .send("CLOSE-SSH".to_string())
+            .await
+            .expect("执行命令失败");
         let mut session = self.session.lock().await;
-        session.disconnect(Disconnect::ByApplication, "", "Chinese").await.expect("关闭 SSH 异常");
+        session
+            .disconnect(Disconnect::ByApplication, "", "Chinese")
+            .await
+            .expect("关闭 SSH 异常");
         println!("SSH 客户端已关闭");
     }
 }

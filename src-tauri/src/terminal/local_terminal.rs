@@ -85,7 +85,7 @@ impl LocalTerminal {
                                 if out_type == "stderr" {
                                     decoded = "[ERROR]".to_owned() + &decoded;
                                 }
-                                let _ = sender.try_send(decoded);  // 不阻塞主线程
+                                let _ = sender.try_send(decoded); // 不阻塞主线程
                             }
                             Err(err) => println!("Failed to decode: {}", err),
                         }

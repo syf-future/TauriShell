@@ -1,7 +1,7 @@
 use std::thread;
 
-mod terminal;
 mod server;
+mod terminal;
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -27,8 +27,9 @@ fn create_server() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    create_server();    //启动服务端
+    create_server(); //启动服务端
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

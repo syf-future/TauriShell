@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import SvgIcon from '@/components/icons.vue';
-import GroupInfo from '@/interfaces/GroupInfo';
 import HostsTemplate from '@/templates/HostsTemplate.vue';
-import { defineProps } from 'vue';
-
-import { ref } from 'vue';
+import { nextTick } from 'vue';
+import { ref, onBeforeMount, onUpdated } from 'vue';
 import HostConnectTemplate from './HostConnectTemplate.vue';
-
+import { storeToRefs } from 'pinia';
+import { groupInfosStore } from '@/stores/groupInfosStore';
+// 用于选择哪些组是展开的
 const groupIds = ref<string[]>([]); // 子页面展开状态
-
 function handleClick(groupId: string): void {
     const index = groupIds.value.indexOf(groupId); // 查找 groupId 的索引
     if (index === -1) {
@@ -19,14 +18,63 @@ function handleClick(groupId: string): void {
         groupIds.value.splice(index, 1);
     }
 }
-// 父组件传递的 props
-const props = defineProps<{
-    groupInfos?: GroupInfo[]
-}>();
-const { groupInfos } = props;
 
+/**
+ * 获取pinia grouo和host信息
+ */
+const { groupInfos } = storeToRefs(groupInfosStore());
+const { deleteGroupInfo, updateGroupInfo, getGroupInfoStore } = groupInfosStore()
 
-// 新建连接信息窗口
+onBeforeMount(async () => {
+    groupInfos.value = await getGroupInfoStore()
+})
+/**
+ * 点击编辑按钮
+ */
+function handleEdit(groupId: string): void {
+    groupInfos.value?.forEach((groupInfo) => {
+        if (groupInfo.groupId === groupId) {
+            groupInfo.groupEdit = true;
+        }
+    })
+    // 聚焦到输入框
+    nextTick(() => {
+        const inputRef = document.querySelector(`#groupNameInputRef_${groupId}`) as HTMLInputElement;
+        inputRef?.focus();
+    })
+}
+/**
+ * 编辑组名称
+ * @param groupId 
+ * @param groupName 
+ */
+function editGroupInfo(groupId: string, groupName: string): void {
+    const index = groupInfos.value.findIndex(item => item.groupId === groupId);
+    if (index > -1) {
+        const groupInfo = groupInfos.value[index];
+        groupInfo.groupName = groupName;
+        groupInfo.groupEdit = false;
+        updateGroupInfo(groupInfo);
+    }
+}
+
+/**
+ * 监听groupIds变化，使input框聚焦
+ */
+onUpdated(() => {
+    if (groupInfos.value) {
+        groupInfos.value.forEach(groupInfo => {
+            if (groupInfo.groupEdit) {
+                nextTick(() => {
+                    const inputRef = document.querySelector(`#groupNameInputRef_${groupInfo.groupId}`) as HTMLInputElement;
+                    inputRef?.focus();
+                })
+            }
+        })
+    }
+})
+
+// 新建连接窗口的状态和回调
 const hostDialogStatus = ref<boolean>(false);
 const editHostDialogStatus = (status: boolean) => {
     hostDialogStatus.value = status;
@@ -43,7 +91,13 @@ const editHostDialogStatus = (status: boolean) => {
             <!-- groups信息 -->
             <div class="groups-info">
                 <div class="groups-name">
-                    {{ groupInfo.groupName }}
+                    <span v-if="groupInfo.groupEdit == false">
+                        {{ groupInfo.groupName }}
+                    </span>
+                    <input v-else v-model="groupInfo.groupName"
+                        @blur="editGroupInfo(groupInfo.groupId, groupInfo.groupName)"
+                        @keyup.enter=" editGroupInfo(groupInfo.groupId, groupInfo.groupName)"
+                        :id="'groupNameInputRef_' + groupInfo.groupId" />
                 </div>
                 <div class="groups-desc">
                     {{ groupInfo.groupHosts.length }} Host
@@ -53,25 +107,24 @@ const editHostDialogStatus = (status: boolean) => {
             <div class="groups-btn">
                 <!-- 新建连接 -->
                 <el-tooltip content="新建连接" placement="top">
-                    <div @click.stop="hostDialogStatus = true">
+                    <div @click.stop="editHostDialogStatus(true)">
                         <SvgIcon class="svg-btn" iconName="icon-lianjie" />
                     </div>
                 </el-tooltip>
 
                 <!-- 编辑 -->
                 <el-tooltip content="编辑" placement="top">
-                    <div @click.stop="">
+                    <div @click.stop="handleEdit(groupInfo.groupId)">
                         <SvgIcon class="svg-btn" iconName="icon-bianji" />
                     </div>
                 </el-tooltip>
 
                 <!-- 删除 -->
                 <el-tooltip content="删除" placement="top">
-                    <div class="groups-btn-delete" @click.stop="">
+                    <div class="groups-btn-delete" @click.stop="deleteGroupInfo(groupInfo.groupId)">
                         <SvgIcon class="svg-btn" iconName="icon-ai-delete" />
                     </div>
                 </el-tooltip>
-
             </div>
         </div>
         <!-- 子组件 Hosts -->
@@ -123,6 +176,16 @@ const editHostDialogStatus = (status: boolean) => {
             font-weight: bold;
             display: flex;
             align-items: center;
+
+            input {
+                outline: none;
+                border: none;
+                background-color: rgb(217, 219, 222);
+                width: 60%;
+                height: 100%;
+                font-size: 16px;
+                border-radius: 5px;
+            }
         }
 
         .groups-desc {

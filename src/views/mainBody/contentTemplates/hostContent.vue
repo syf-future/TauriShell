@@ -7,12 +7,16 @@ import HostsTemplate from '@/templates/HostsTemplate.vue';
 const { setTerminalStatus } = terminalStore()
 import TerminalLabel from '@/interfaces/TerminalInfo';
 import { terminalLabelStore } from '@/stores/terminalLabelStore';
-import { ref } from 'vue';
-import HostInfo from '@/interfaces/HostInfo';
-import GroupInfo from '@/interfaces/GroupInfo';
+import { ref, onBeforeUnmount } from 'vue';
 import HostConnectTemplate from '@/templates/HostConnectTemplate.vue';
+import { storeToRefs } from 'pinia';
+import { hostInfosStore } from '@/stores/hostInfosStore';
+import { groupInfosStore } from '@/stores/groupInfosStore';
+const { addGroupInfo } = groupInfosStore();
+/**
+ * 新建终端
+ */
 const { addTerminalLabel, setTerminalLabelStoreId } = terminalLabelStore();
-
 const onNewTermial = () => {
     //打开终端界面
     setTerminalStatus('terminal')
@@ -28,52 +32,33 @@ const onNewTermial = () => {
     addTerminalLabel(terminalLabel);
     setTerminalLabelStoreId(terminalLabel.terminalId)
 }
-const hostInfos = ref<HostInfo[]>([
-    {
-        hostId: SequenceUtil.nextId(),
-        hostName: 'CentOs',
-        hostIp: '8.153.66.250',
-        hostPort: '22',
-        hostUserName: 'root',
-        hostPassword: 'loan!1234',
-    },
-    {
-        hostId: SequenceUtil.nextId(),
-        hostName: '测试1',
-        hostIp: '127.0.0.1',
-        hostPort: '22',
-        hostUserName: 'root',
-        hostPassword: 'loan!1234',
-    }
-]);
-// Groups Hosts 初始数据
-const groupInfos = ref<GroupInfo[]>([
-    {
-        groupId: SequenceUtil.nextId(),
-        groupName: '测试组1',
-        groupHosts: hostInfos.value
-    },
-    {
-        groupId: SequenceUtil.nextId(),
-        groupName: '测试组2',
-        groupHosts: hostInfos.value
-    }
-]);
 
-// 编辑连接信息窗口
+/**
+ * 打开新建连接子页面
+ */
 const hostDialogStatus = ref<boolean>(false);
+// 回调函数 用于设置子页面的关闭
 const editHostDialogStatus = (status: boolean) => {
     hostDialogStatus.value = status;
 }
+
+/**
+ * 获取pinia的hostInfos信息
+ */
+const { hostInfos } = storeToRefs(hostInfosStore());
+const { getHostInfoStore } = hostInfosStore()
+onBeforeUnmount(async () => {
+    hostInfos.value = await getHostInfoStore();
+});
 </script>
 
 <template>
     <div id="hostContent">
         <div class="hostHeader">
-            <div class="hostTitle">
-                <CustomButton :title="'终端'" :svgIcon="'icon-terminal'" @click="onNewTermial()" />
+            <div class="hostTitle" @click="onNewTermial()">
+                <CustomButton :title="'终端'" :svgIcon="'icon-terminal'" />
             </div>
-            <div class="hostTitle">
+            <div class="hostTitle" @click="addGroupInfo()">
                 <CustomButton :title="'新建组'" :svgIcon="'icon-zuzhiqunzu'" />
             </div>
             <div class="hostTitle" @click="hostDialogStatus = true">
@@ -86,7 +71,7 @@ const editHostDialogStatus = (status: boolean) => {
                     Groups
                 </div>
                 <div class="body-style">
-                    <GroupsTemplate :groupInfos="groupInfos" />
+                    <GroupsTemplate />
                 </div>
             </div>
             <div class="body-hosts">

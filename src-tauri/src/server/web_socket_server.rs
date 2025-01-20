@@ -85,7 +85,11 @@ pub async fn start() {
                                                 "SSH" => {
                                                     println!("开始连接ssh远程服务器");
                                                     if ssh_terminal.is_none() {
-                                                        ssh_terminal = Some(SshTerminal::new(tx.clone()).await.expect("连接ssh服务器异常"));
+                                                        ssh_terminal = Some(
+                                                            SshTerminal::new(tx.clone())
+                                                                .await
+                                                                .expect("连接ssh服务器异常"),
+                                                        );
                                                     }
                                                 }
                                                 _ => {}
