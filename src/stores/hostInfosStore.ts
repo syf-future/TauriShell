@@ -21,13 +21,26 @@ export const hostInfosStore = defineStore("hostInfosStore", () => {
         StoreHostInfoUtil.setHostInfoStore(hostInfos.value);
     }
     /**
+    * 修改连接信息
+    * @param hostInfo 
+    */
+    function updateHostInfo(hostInfo: HostInfo): void {
+        const index = hostInfos.value.findIndex(item => item.hostId === hostInfo.hostId);
+        if (index > -1) {
+            hostInfos.value[index] = hostInfo;
+        }
+        StoreHostInfoUtil.setHostInfoStore(hostInfos.value);
+    }
+    /**
      * 删除连接信息 
      * @param hostId 
      */
     function deleteHostInfo(hostId: string): void {
-        hostInfos.value = hostInfos.value.filter(hostInfo => hostInfo.hostId !== hostId);
-        StoreHostInfoUtil.setHostInfoStore(hostInfos.value);
+        const index = hostInfos.value.findIndex(item => item.hostId === hostId);
+        if (index > -1) {
+            hostInfos.value.splice(index, 1);
+            StoreHostInfoUtil.setHostInfoStore(hostInfos.value);
+        }
     }
-
-    return { hostInfos, addHostInfo, deleteHostInfo, getHostInfoStore }
+    return { hostInfos, addHostInfo, deleteHostInfo, updateHostInfo, getHostInfoStore }
 })

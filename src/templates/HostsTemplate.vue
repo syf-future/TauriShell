@@ -3,26 +3,46 @@ import { defineProps, ref } from 'vue';
 import SvgIcon from '@/components/icons.vue';
 import HostInfo from '@/interfaces/HostInfo';
 import HostConnectTemplate from './HostConnectTemplate.vue';
+import { groupInfosStore } from '@/stores/groupInfosStore';
+import { hostInfosStore } from '@/stores/hostInfosStore';
+const { deleteGroupHostInfo } = groupInfosStore()
+const { deleteHostInfo } = hostInfosStore()
 
 // 接收父组件传来的数据
 const props = defineProps<{
-    hostInfos?: HostInfo[];
+    hostInfos: HostInfo[];
+    groupId?: string;
 }>();
-const { hostInfos } = props;
+const { hostInfos, groupId } = props;
 
 // 连接服务器
 function connectServer(hostInfo: HostInfo): void {
     console.log("开始连接服务器：", hostInfo);
 };
-
-// 编辑连接信息窗口
+/**
+ * 点击编辑
+ */
 const hostDialogStatus = ref<boolean>(false);
+// 编辑子页面回调函数(子传父)
 const editHostDialogStatus = (status: boolean) => {
     hostDialogStatus.value = status;
 }
-
-function clickEditHost() {
+const hostInfo = ref<HostInfo | undefined>(undefined);
+// 点击编辑
+function clickEditHost(host_info: HostInfo) {
+    hostInfo.value = host_info;
     hostDialogStatus.value = true;
+}
+
+/**
+ * 点击删除
+ */
+function clickDeleteHost(hostId: string) {
+    if (groupId) {
+        deleteGroupHostInfo(hostId, groupId);
+    } else {
+        deleteHostInfo(hostId);
+    }
 }
 </script>
 
@@ -45,18 +65,18 @@ function clickEditHost() {
             <!-- 功能按钮 -->
             <div class="groups-btn">
                 <!-- 编辑 -->
-                <div @click.stop="clickEditHost()">
+                <div @click.stop="clickEditHost(hostInfo)">
                     <SvgIcon class="svg-btn" iconName="icon-bianji" />
                 </div>
                 <!-- 删除 -->
-                <div class="groups-btn-delete" @click.stop="">
+                <div class="groups-btn-delete" @click.stop="clickDeleteHost(hostInfo.hostId)">
                     <SvgIcon class="svg-btn" iconName="icon-ai-delete" />
                 </div>
             </div>
         </div>
     </div>
     <div v-if="hostDialogStatus == true">
-        <HostConnectTemplate @editHostDialogStatus="editHostDialogStatus" />
+        <HostConnectTemplate :hostInfo="hostInfo" :groupId="groupId" @editHostDialogStatus="editHostDialogStatus" />
     </div>
 </template>
 

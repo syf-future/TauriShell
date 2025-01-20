@@ -19,9 +19,9 @@ class StoreHostInfoUtil {
      * @returns 
      */
     static async getHostInfoStore(): Promise<HostInfo[]> {
-        const HostInfos = await this.getStore('HostS-INFO');
-        if (HostInfos) {
-            return HostInfos as HostInfo[]; // 类型断言，告诉 TS 返回的是 HostInfo[]
+        const hostInfos = await this.getStore('Hosts-INFO');
+        if (hostInfos) {
+            return hostInfos as HostInfo[]; // 类型断言，告诉 TS 返回的是 HostInfo[]
         }
         return []
     }
@@ -30,8 +30,8 @@ class StoreHostInfoUtil {
      * 设置组信息缓存
      * @param HostInfos 
      */
-    static setHostInfoStore(HostInfos: HostInfo[]) {
-        this.setStore('HostS-INFO', HostInfos);
+    static setHostInfoStore(hostInfos: HostInfo[]) {
+        this.setStore('Hosts-INFO', hostInfos);
     }
 }
 export { StoreHostInfoUtil }

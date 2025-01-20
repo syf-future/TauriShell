@@ -5,5 +5,6 @@ interface HostInfo {
     hostPort: string;         // 主机端口
     hostUserName: string;     // 主机用户名
     hostPassword: string;     // 主机密码
+    hostConnect: string;      // 主机连接方式
 }
 export default HostInfo;  

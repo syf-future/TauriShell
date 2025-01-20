@@ -3,6 +3,7 @@ import { SequenceUtil } from "@/utils/SequenceUtil";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { StoreGroupInfoUtil } from '@/utils/StoreGroupInfoUtil';
+import HostInfo from "@/interfaces/HostInfo";
 
 export const groupInfosStore = defineStore("groupInfosStore", () => {
 
@@ -10,9 +11,9 @@ export const groupInfosStore = defineStore("groupInfosStore", () => {
     const groupInfos = ref<GroupInfo[]>([]);
 
     /**
- * 获取连接信息
- * @returns 
- */
+    * 获取连接信息
+    * @returns 
+    */
     async function getGroupInfoStore(): Promise<GroupInfo[]> {
         return await StoreGroupInfoUtil.getGroupInfoStore();
     }
@@ -31,6 +32,10 @@ export const groupInfosStore = defineStore("groupInfosStore", () => {
         groupInfos.value.push(groupInfo);
         StoreGroupInfoUtil.setGroupInfoStore(groupInfos.value);
     }
+    /**
+     * 修改组信息
+     * @param groupInfo 
+     */
     function updateGroupInfo(groupInfo: GroupInfo): void {
         const index = groupInfos.value.findIndex(item => item.groupId === groupInfo.groupId);
         if (index > -1) {
@@ -47,5 +52,38 @@ export const groupInfosStore = defineStore("groupInfosStore", () => {
         StoreGroupInfoUtil.setGroupInfoStore(groupInfos.value);
     }
 
-    return { groupInfos, addGroupInfo, deleteGroupInfo, updateGroupInfo, getGroupInfoStore }
+
+    /**
+     * 修改组里host信息
+     */
+    function updateGroupHostInfo(hostInfo: HostInfo, groupId: string): void {
+        console.log("开始编辑组里host信息：", hostInfo, groupId);
+
+        const index = groupInfos.value.findIndex(item => item.groupId === groupId);
+        if (index > -1) {
+            let hostInfos = groupInfos.value[index].groupHosts
+            let hostIndex = hostInfos.findIndex(item => item.hostId === hostInfo.hostId)
+            if (hostIndex > -1) {
+                hostInfos[hostIndex] = hostInfo
+            } else {
+                hostInfos.push(hostInfo)
+            }
+            StoreGroupInfoUtil.setGroupInfoStore(groupInfos.value)
+        }
+    }
+    /**
+     * 删除组里host信息
+     */
+    function deleteGroupHostInfo(hostId: string, groupId: string): void {
+        const index = groupInfos.value.findIndex(item => item.groupId === groupId);
+        if (index > -1) {
+            let hostInfos = groupInfos.value[index].groupHosts
+            let hostIndex = hostInfos.findIndex(item => item.hostId === hostId)
+            if (hostIndex > -1) {
+                hostInfos.splice(hostIndex, 1)
+            }
+            StoreGroupInfoUtil.setGroupInfoStore(groupInfos.value)
+        }
+    }
+    return { groupInfos, addGroupInfo, deleteGroupInfo, updateGroupInfo, getGroupInfoStore, updateGroupHostInfo, deleteGroupHostInfo }
 })

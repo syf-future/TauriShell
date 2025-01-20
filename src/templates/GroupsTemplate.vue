@@ -79,6 +79,14 @@ const hostDialogStatus = ref<boolean>(false);
 const editHostDialogStatus = (status: boolean) => {
     hostDialogStatus.value = status;
 }
+/**
+ * 点击新建连接
+ */
+const groupId = ref<string | undefined>(undefined);
+function clickNewHost(id: string): void {
+    groupId.value = id;
+    editHostDialogStatus(true)
+}
 </script>
 
 <template>
@@ -107,7 +115,7 @@ const editHostDialogStatus = (status: boolean) => {
             <div class="groups-btn">
                 <!-- 新建连接 -->
                 <el-tooltip content="新建连接" placement="top">
-                    <div @click.stop="editHostDialogStatus(true)">
+                    <div @click.stop="clickNewHost(groupInfo.groupId)">
                         <SvgIcon class="svg-btn" iconName="icon-lianjie" />
                     </div>
                 </el-tooltip>
@@ -129,11 +137,12 @@ const editHostDialogStatus = (status: boolean) => {
         </div>
         <!-- 子组件 Hosts -->
         <div class="groups-hosts">
-            <HostsTemplate :hostInfos="groupInfo.groupHosts" v-if="groupIds.includes(groupInfo.groupId)" />
+            <HostsTemplate :hostInfos="groupInfo.groupHosts" :groupId="groupInfo.groupId"
+                v-if="groupIds.includes(groupInfo.groupId)" />
         </div>
     </div>
     <div v-if="hostDialogStatus == true">
-        <HostConnectTemplate @editHostDialogStatus="editHostDialogStatus" />
+        <HostConnectTemplate @editHostDialogStatus="editHostDialogStatus" :groupId="groupId" />
     </div>
 </template>
 

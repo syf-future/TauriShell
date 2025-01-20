@@ -1,42 +1,90 @@
 <script setup lang="ts">
 import SvgIcon from '@/components/icons.vue';
-import { onMounted, reactive, ref, defineEmits } from 'vue'
+import HostInfo from '@/interfaces/HostInfo';
+import { SequenceUtil } from '@/utils/SequenceUtil';
+import { onMounted, ref, defineEmits, defineProps } from 'vue'
+import { groupInfosStore } from '@/stores/groupInfosStore';
+import { hostInfosStore } from '@/stores/hostInfosStore';
+const { updateGroupHostInfo } = groupInfosStore()
+const { addHostInfo, updateHostInfo } = hostInfosStore()
 
+// 接收父组件传来的数据
+const props = defineProps<{
+    hostInfo?: HostInfo;
+    groupId?: string
+}>();
+const { hostInfo, groupId } = props;
+const addOrEdit = ref<boolean>(false)
 // 向父组件传递状态
 const emit = defineEmits(['editHostDialogStatus'])
 const editHostDialogStatus = () => {
     emit('editHostDialogStatus', false)
 }
+
 // 组件展示状态
 const dialogFormVisible = ref<boolean>(true)
 onMounted(() => {
     dialogFormVisible.value = true
+    if (hostInfo) {
+        addOrEdit.value = true
+        form.value = hostInfo
+    }
 })
-const clickClose = () => {
+/**
+ * 点击关闭
+ */
+function clickClose() {
     dialogFormVisible.value = false
     editHostDialogStatus()
 }
-const form = reactive({
+/**
+ * 点击确定
+ */
+function clickSuccess() {
+    // 新增或编辑
+    if (hostInfo) {
+        // 编辑
+        if (groupId) {
+            updateGroupHostInfo(form.value, groupId)
+        } else {
+            updateHostInfo(form.value)
+        }
+    } else {
+        // 新增
+        if (groupId) {
+            updateGroupHostInfo(form.value, groupId)
+        } else {
+            addHostInfo(form.value)
+        }
+    }
+    dialogFormVisible.value = false
+    editHostDialogStatus()
+}
+// 表单数据
+const form = ref<HostInfo>({
+    hostId: SequenceUtil.nextId(),
     hostName: '',
     hostIp: '',
     hostPort: '22',
     hostUserName: '',
     hostPassword: '',
-    hostPrivateKey: '',
     hostConnect: '账号/密码'
 })
 const connectTypeStatus = ref<string>('0')
 function clickConnectType(type: string) {
     connectTypeStatus.value = type
 }
-
+// 连接方式
 const connectMode = ref(['账号/密码', '公钥'])
 </script>
 
 <template>
     <el-dialog v-model="dialogFormVisible" @close="clickClose" class="hostDialog">
-        <div class="dialogTitle">
+        <div class="dialogTitle" v-if="!addOrEdit">
             新建连接
+        </div>
+        <div class="dialogTitle" v-if="addOrEdit">
+            编辑连接
         </div>
         <div class="dialogConnectType">
             <div class="dialogConnectTypeItem" :class="{ active: connectTypeStatus === '0' }"
@@ -73,11 +121,11 @@ const connectMode = ref(['账号/密码', '公钥'])
 
             <div class="formItemInput">
                 <span>用户名：</span>
-                <el-input v-model="form.hostName" style="width: 240px" placeholder="输入用户名" />
+                <el-input v-model="form.hostUserName" style="width: 240px" placeholder="输入用户名" />
             </div>
             <div class="formItemInput">
                 <span>密码：</span>
-                <el-input v-model="form.hostIp" style="width: 240px" placeholder="输入密码" />
+                <el-input v-model="form.hostPassword" style="width: 240px" placeholder="输入密码" />
             </div>
         </el-form>
         <div class="dialogBtn">
@@ -85,8 +133,8 @@ const connectMode = ref(['账号/密码', '公钥'])
                 <el-button plain>测试连接</el-button>
             </div>
             <div>
-                <el-button plain @click="clickClose">返回</el-button>
-                <el-button type="primary" plain>确定</el-button>
+                <el-button plain @click="clickClose()">返回</el-button>
+                <el-button type="primary" plain @click="clickSuccess()">确定</el-button>
             </div>
         </div>
     </el-dialog>

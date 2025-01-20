@@ -7,7 +7,7 @@ import HostsTemplate from '@/templates/HostsTemplate.vue';
 const { setTerminalStatus } = terminalStore()
 import TerminalLabel from '@/interfaces/TerminalInfo';
 import { terminalLabelStore } from '@/stores/terminalLabelStore';
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, onBeforeMount } from 'vue';
 import HostConnectTemplate from '@/templates/HostConnectTemplate.vue';
 import { storeToRefs } from 'pinia';
 import { hostInfosStore } from '@/stores/hostInfosStore';
@@ -47,8 +47,10 @@ const editHostDialogStatus = (status: boolean) => {
  */
 const { hostInfos } = storeToRefs(hostInfosStore());
 const { getHostInfoStore } = hostInfosStore()
-onBeforeUnmount(async () => {
+const hostApplyStatus = ref<boolean>(false);
+onBeforeMount(async () => {
     hostInfos.value = await getHostInfoStore();
+    hostApplyStatus.value = true;
 });
 </script>
 
@@ -78,7 +80,7 @@ onBeforeUnmount(async () => {
                 <div class="body-title">
                     Hosts
                 </div>
-                <div class="body-style">
+                <div class="body-style" v-if="hostApplyStatus">
                     <HostsTemplate :hostInfos="hostInfos" />
                 </div>
             </div>
