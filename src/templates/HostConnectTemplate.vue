@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import SvgIcon from '@/components/icons.vue';
 import { onMounted, reactive, ref, defineEmits } from 'vue'
-// 组件展示状态
-const dialogFormVisible = ref<boolean>(true)
+
 // 向父组件传递状态
 const emit = defineEmits(['editHostDialogStatus'])
 const editHostDialogStatus = () => {
     emit('editHostDialogStatus', false)
 }
+// 组件展示状态
+const dialogFormVisible = ref<boolean>(true)
 onMounted(() => {
     dialogFormVisible.value = true
 })

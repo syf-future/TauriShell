@@ -20,6 +20,10 @@ const hostDialogStatus = ref<boolean>(false);
 const editHostDialogStatus = (status: boolean) => {
     hostDialogStatus.value = status;
 }
+
+function clickEditHost() {
+    hostDialogStatus.value = true;
+}
 </script>
 
 <template>
@@ -41,7 +45,7 @@ const editHostDialogStatus = (status: boolean) => {
             <!-- 功能按钮 -->
             <div class="groups-btn">
                 <!-- 编辑 -->
-                <div @click.stop="hostDialogStatus = true">
+                <div @click.stop="clickEditHost()">
                     <SvgIcon class="svg-btn" iconName="icon-bianji" />
                 </div>
                 <!-- 删除 -->
