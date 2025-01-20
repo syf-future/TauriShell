@@ -16,19 +16,22 @@ import MainBody from '@/views/mainBody/index.vue'
 
 <style lang="scss" scoped>
 #architecture {
-    width: 100%;
-    height: 100%;
+    width: 100vw; // 视口宽度
+    height: 100vh; // 视口高度
     display: flex;
-    overflow: auto;
+    flex-direction: row;
+    overflow: hidden;
 
+    /* 元素按列垂直排列 */
     .architecture-sidebar {
         width: 65px;
-        height: 100vh;
+        height: 100%;
         background-color: #30303c;
     }
 
     .architecture-mainBody {
-        flex-grow: 1;
+        width: 100%;
+        height: 100%;
         background-color: #221f27;
     }
 }

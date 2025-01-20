@@ -18,8 +18,6 @@ import MainContent from './templates/main-content.vue';
 #mainBody {
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
 
     .label-style {
         height: 50px;
@@ -28,7 +26,8 @@ import MainContent from './templates/main-content.vue';
     }
 
     .content-style {
-        flex: 1;
+        height: calc(100% - 50px);
+        width: 100%;
     }
 }
 </style>

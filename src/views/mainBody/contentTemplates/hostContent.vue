@@ -95,8 +95,6 @@ onBeforeMount(async () => {
 #hostContent {
     height: 100%;
     width: 100%;
-    display: flex;
-    flex-direction: column;
 
     .hostHeader {
         height: 60px;
@@ -104,6 +102,7 @@ onBeforeMount(async () => {
         background-color: #30303c;
         display: flex;
         align-items: center;
+        overflow: hidden;
 
         .hostTitle {
             margin-left: 10px;
@@ -111,10 +110,12 @@ onBeforeMount(async () => {
     }
 
     .hostBody {
-        flex: 1;
+        height: calc(100% - 60px);
+        width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
+        overflow: auto;
 
         .body-style {
             width: 100%;

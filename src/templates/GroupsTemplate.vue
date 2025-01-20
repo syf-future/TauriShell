@@ -6,6 +6,7 @@ import { ref, onBeforeMount, onUpdated } from 'vue';
 import HostConnectTemplate from './HostConnectTemplate.vue';
 import { storeToRefs } from 'pinia';
 import { groupInfosStore } from '@/stores/groupInfosStore';
+import HostDeleteTemplate from '@/templates/HostDeleteTemplate.vue';
 // 用于选择哪些组是展开的
 const groupIds = ref<string[]>([]); // 子页面展开状态
 function handleClick(groupId: string): void {
@@ -23,7 +24,7 @@ function handleClick(groupId: string): void {
  * 获取pinia grouo和host信息
  */
 const { groupInfos } = storeToRefs(groupInfosStore());
-const { deleteGroupInfo, updateGroupInfo, getGroupInfoStore } = groupInfosStore()
+const { updateGroupInfo, getGroupInfoStore } = groupInfosStore()
 
 onBeforeMount(async () => {
     groupInfos.value = await getGroupInfoStore()
@@ -87,6 +88,20 @@ function clickNewHost(id: string): void {
     groupId.value = id;
     editHostDialogStatus(true)
 }
+
+/**
+ * 点击删除  打开删除确认弹窗
+ */
+const groupDeleteStatus = ref<boolean>(false);
+// 点击删除确认弹窗回调函数(子传父)
+const deleteHostDialogStatus = (status: boolean) => {
+    groupDeleteStatus.value = status;
+}
+// 点击删除确认弹窗确定按钮
+function deleteGroupInfo(id: string) {
+    groupDeleteStatus.value = true;
+    groupId.value = id;
+}
 </script>
 
 <template>
@@ -143,6 +158,9 @@ function clickNewHost(id: string): void {
     </div>
     <div v-if="hostDialogStatus == true">
         <HostConnectTemplate @editHostDialogStatus="editHostDialogStatus" :groupId="groupId" />
+    </div>
+    <div v-if="groupDeleteStatus == true">
+        <HostDeleteTemplate :groupId="groupId" @deleteHostDialogStatus="deleteHostDialogStatus" />
     </div>
 </template>
 

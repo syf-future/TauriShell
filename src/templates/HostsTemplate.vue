@@ -3,10 +3,7 @@ import { defineProps, ref } from 'vue';
 import SvgIcon from '@/components/icons.vue';
 import HostInfo from '@/interfaces/HostInfo';
 import HostConnectTemplate from './HostConnectTemplate.vue';
-import { groupInfosStore } from '@/stores/groupInfosStore';
-import { hostInfosStore } from '@/stores/hostInfosStore';
-const { deleteGroupHostInfo } = groupInfosStore()
-const { deleteHostInfo } = hostInfosStore()
+import HostDeleteTemplate from './HostDeleteTemplate.vue';
 
 // 接收父组件传来的数据
 const props = defineProps<{
@@ -19,8 +16,9 @@ const { hostInfos, groupId } = props;
 function connectServer(hostInfo: HostInfo): void {
     console.log("开始连接服务器：", hostInfo);
 };
+
 /**
- * 点击编辑
+ * 点击编辑 打开编辑子页面
  */
 const hostDialogStatus = ref<boolean>(false);
 // 编辑子页面回调函数(子传父)
@@ -35,14 +33,18 @@ function clickEditHost(host_info: HostInfo) {
 }
 
 /**
- * 点击删除
+ * 点击删除  打开删除确认弹窗
  */
-function clickDeleteHost(hostId: string) {
-    if (groupId) {
-        deleteGroupHostInfo(hostId, groupId);
-    } else {
-        deleteHostInfo(hostId);
-    }
+const hostDeleteStatus = ref<boolean>(false);
+// 点击删除确认弹窗回调函数(子传父)
+const deleteHostDialogStatus = (status: boolean) => {
+    hostDeleteStatus.value = status;
+}
+// 点击删除确认弹窗确定按钮
+const hostId = ref<string | undefined>(undefined);
+function clickDeleteHost(host_id: string) {
+    hostDeleteStatus.value = true;
+    hostId.value = host_id;
 }
 </script>
 
@@ -77,6 +79,9 @@ function clickDeleteHost(hostId: string) {
     </div>
     <div v-if="hostDialogStatus == true">
         <HostConnectTemplate :hostInfo="hostInfo" :groupId="groupId" @editHostDialogStatus="editHostDialogStatus" />
+    </div>
+    <div v-if="hostDeleteStatus == true">
+        <HostDeleteTemplate :hostId="hostId" :groupId="groupId" @deleteHostDialogStatus="deleteHostDialogStatus" />
     </div>
 </template>
 

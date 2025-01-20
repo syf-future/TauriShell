@@ -3,11 +3,12 @@ import SvgIcon from '@/components/icons.vue';
 import HostInfo from '@/interfaces/HostInfo';
 import { SequenceUtil } from '@/utils/SequenceUtil';
 import { onMounted, ref, defineEmits, defineProps } from 'vue'
+import MessageInfo from '@/utils/MessagePop'
 import { groupInfosStore } from '@/stores/groupInfosStore';
 import { hostInfosStore } from '@/stores/hostInfosStore';
+import { FormInstance } from 'element-plus';
 const { updateGroupHostInfo } = groupInfosStore()
 const { addHostInfo, updateHostInfo } = hostInfosStore()
-
 // 接收父组件传来的数据
 const props = defineProps<{
     hostInfo?: HostInfo;
@@ -40,25 +41,40 @@ function clickClose() {
 /**
  * 点击确定
  */
-function clickSuccess() {
-    // 新增或编辑
-    if (hostInfo) {
-        // 编辑
-        if (groupId) {
-            updateGroupHostInfo(form.value, groupId)
-        } else {
-            updateHostInfo(form.value)
+function clickSuccess(formEl: FormInstance | undefined) {
+    if (!formEl) return
+    formEl.validate((valid) => {
+        console.log(valid);
+        if (valid) {
+            // 新增或编辑
+            if (hostInfo) {
+                // 编辑
+                if (groupId) {
+                    updateGroupHostInfo(form.value, groupId)
+                } else {
+                    updateHostInfo(form.value)
+                }
+            } else {
+                // 新增
+                if (groupId) {
+                    updateGroupHostInfo(form.value, groupId)
+                } else {
+                    addHostInfo(form.value)
+                }
+            }
+            MessageInfo.success("编辑成功")
+            dialogFormVisible.value = false
+            editHostDialogStatus()
         }
-    } else {
-        // 新增
-        if (groupId) {
-            updateGroupHostInfo(form.value, groupId)
-        } else {
-            addHostInfo(form.value)
-        }
-    }
-    dialogFormVisible.value = false
-    editHostDialogStatus()
+    })
+
+}
+
+/**
+ * 点击测试连接
+ */
+function clickConnectTest() {
+    MessageInfo.success("连接测试成功")
 }
 // 表单数据
 const form = ref<HostInfo>({
@@ -76,6 +92,28 @@ function clickConnectType(type: string) {
 }
 // 连接方式
 const connectMode = ref(['账号/密码', '公钥'])
+
+const ruleFormRef = ref<FormInstance>()
+const rules = {
+    hostName: [
+        { required: true, message: '请输入主机名称', trigger: 'blur' }
+    ],
+    hostIp: [
+        { required: true, message: '请输入主机IP', trigger: 'blur' }
+    ],
+    hostPort: [
+        { required: true, message: '请输入主机端口', trigger: 'blur' }
+    ],
+    hostConnect: [
+        { required: true, message: '请选择连接方式', trigger: 'change' }
+    ],
+    hostUserName: [
+        { required: true, message: '请输入用户名', trigger: 'blur' }
+    ],
+    hostPassword: [
+        { required: true, message: '请输入密码', trigger: 'blur' }
+    ]
+};
 </script>
 
 <template>
@@ -98,43 +136,37 @@ const connectMode = ref(['账号/密码', '公钥'])
                 <span>SFTP</span>
             </div>
         </div>
-        <el-form :model="form" class="dialogFormStyle">
-            <div class="formItemInput">
-                <span>主机名称：</span>
+        <el-form :model="form" :rules="rules" class="dialogFormStyle" ref="ruleFormRef">
+            <el-form-item label="主机名称：" prop="hostName" class="custom-form-item">
                 <el-input v-model="form.hostName" style="width: 240px" placeholder="输入名称" />
-            </div>
-            <div class="formItemInput">
-                <span>主机IP：</span>
+            </el-form-item>
+            <el-form-item label="主机IP：" prop="hostIp" class="custom-form-item">
                 <el-input v-model="form.hostIp" style="width: 240px" placeholder="输入IP" />
-            </div>
-            <div class="formItemInput">
-                <span>主机端口：</span>
+            </el-form-item>
+            <el-form-item label="主机端口" prop="hostPort" class="custom-form-item">
                 <el-input v-model="form.hostPort" style="width: 50px" placeholder="端口" />
-            </div>
+            </el-form-item>
 
-            <div class="formItemInput">
-                <span>连接方式：</span>
+            <el-form-item label="连接方式" prop="hostConnect" class="custom-form-item">
                 <el-select v-model="form.hostConnect" style="width: 150px">
                     <el-option v-for="item in connectMode" :key="item" :label="item" :value="item" />
                 </el-select>
-            </div>
+            </el-form-item>
 
-            <div class="formItemInput">
-                <span>用户名：</span>
+            <el-form-item label="用户名" prop="hostUserName" class="custom-form-item">
                 <el-input v-model="form.hostUserName" style="width: 240px" placeholder="输入用户名" />
-            </div>
-            <div class="formItemInput">
-                <span>密码：</span>
+            </el-form-item>
+            <el-form-item label="密码" prop="hostPassword" class="custom-form-item">
                 <el-input v-model="form.hostPassword" style="width: 240px" placeholder="输入密码" />
-            </div>
+            </el-form-item>
         </el-form>
         <div class="dialogBtn">
             <div>
-                <el-button plain>测试连接</el-button>
+                <el-button type="success" plain @click="clickConnectTest()">测试连接</el-button>
             </div>
             <div>
                 <el-button plain @click="clickClose()">返回</el-button>
-                <el-button type="primary" plain @click="clickSuccess()">确定</el-button>
+                <el-button type="primary" plain @click="clickSuccess(ruleFormRef)">确定</el-button>
             </div>
         </div>
     </el-dialog>
@@ -142,8 +174,8 @@ const connectMode = ref(['账号/密码', '公钥'])
 
 <style lang="scss">
 .hostDialog {
-    width: 35%;
-    height: 70%;
+    width: 500px;
+    height: 600px;
     background-color: rgb(225, 225, 223);
     position: fixed;
     top: 50%;
@@ -154,10 +186,10 @@ const connectMode = ref(['账号/密码', '公钥'])
 
 // 标题
 .dialogTitle {
-    height: 24px;
+    height: 5%;
     width: 100%;
     color: rgb(82, 77, 77);
-    font-size: 24px;
+    font-size: 26px;
     font-weight: bold;
     letter-spacing: 4px;
     text-align: center;
@@ -197,7 +229,9 @@ const connectMode = ref(['账号/密码', '公钥'])
         }
 
         span {
+            margin-top: 2px;
             font-size: 12px;
+            color: #000;
             cursor: default;
         }
     }
@@ -207,20 +241,17 @@ const connectMode = ref(['账号/密码', '公钥'])
 .dialogFormStyle {
     padding: 20px;
     margin-top: 10px;
-    border: 1px solid #d3d5d5;
-    overflow-y: auto;
+    border: 1px solid #b9bdbd;
 
-    .formItemInput {
-        margin-top: 20px;
-        display: flex;
-        align-items: center;
+    .custom-form-item {
+        margin-bottom: 25px;
+    }
 
-        span {
-            width: 100px;
-            font-size: 16px;
-            cursor: default;
-            color: #000;
-        }
+    .custom-form-item .el-form-item__label {
+        color: #434242;
+        font-size: 16px;
+        width: 120px;
+        justify-content: flex-start;
     }
 }
 
