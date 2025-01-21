@@ -39,7 +39,6 @@ impl SshTerminal {
         let mut channel = session.channel_open_session().await?;
         let (w, h) = (40, 30); // 获取终端尺寸
 
-        // 请求伪终端 (PTY)
         channel
             .request_pty(false, "xterm".into(), w as u32, h as u32, 0, 0, &[])
             .await?;
@@ -118,6 +117,36 @@ impl SshTerminal {
             .await
             .expect("关闭 SSH 异常");
         println!("SSH 客户端已关闭");
+    }
+
+    pub async fn is_connect(ip: &str, port: u16, username: &str, password: &str) -> String {
+        let addrs = (ip, port);
+        let config = client::Config {
+            ..<_>::default() // 使用默认配置
+        };
+        let config = Arc::new(config);
+        let sh = CustomClient {}; // 创建一个自定义客户端实例
+        // 尝试连接到 SSH 服务器
+        match client::connect(config, addrs, sh).await {
+            Ok(mut session) => {
+                // 使用密码进行身份验证
+                match session.authenticate_password(username, password).await {
+                    Ok(auth_res) => {
+                        if auth_res {
+                            "连接成功".to_string()
+                        } else {
+                            "密码认证失败".to_string()
+                        }
+                    }
+                    Err(e) => {
+                        format!("认证过程中发生错误: {}", e)
+                    }
+                }
+            }
+            Err(e) => {
+                format!("连接失败: {}", e)
+            }
+        }
     }
 }
 

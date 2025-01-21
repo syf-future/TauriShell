@@ -73,15 +73,31 @@ function clickSuccess(formEl: FormInstance | undefined) {
 /**
  * 点击测试连接
  */
-function clickConnectTest() {
-    MessageInfo.success("连接测试成功")
+import { invoke } from '@tauri-apps/api/core';
+
+const loadingStatus = ref<boolean>(false)
+function clickConnectTest(form: HostInfo) {
+    loadingStatus.value = true
+    invoke('is_connect', {
+        ip: form.hostIp,
+        port: form.hostPort,
+        username: form.hostUserName,
+        password: form.hostPassword,
+    }).then((res) => {
+        MessageInfo.success(res as string)
+        loadingStatus.value = false
+    })
+        .catch((e) => {
+            MessageInfo.error(e)
+            loadingStatus.value = false
+        });
 }
 // 表单数据
 const form = ref<HostInfo>({
     hostId: SequenceUtil.nextId(),
     hostName: '',
     hostIp: '',
-    hostPort: '22',
+    hostPort: 22,
     hostUserName: '',
     hostPassword: '',
     hostConnect: '账号/密码'
@@ -93,6 +109,7 @@ function clickConnectType(type: string) {
 // 连接方式
 const connectMode = ref(['账号/密码', '公钥'])
 
+// 表单验证规则
 const ruleFormRef = ref<FormInstance>()
 const rules = {
     hostName: [
@@ -162,7 +179,8 @@ const rules = {
         </el-form>
         <div class="dialogBtn">
             <div>
-                <el-button type="success" plain @click="clickConnectTest()">测试连接</el-button>
+                <el-button type="success" plain @click="clickConnectTest(form)"
+                    :loading="loadingStatus">测试连接</el-button>
             </div>
             <div>
                 <el-button plain @click="clickClose()">返回</el-button>
