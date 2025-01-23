@@ -12,10 +12,7 @@ const props = defineProps<{
 }>();
 const { hostInfos, groupId } = props;
 
-// 连接服务器
-function connectServer(hostInfo: HostInfo): void {
-    console.log("开始连接服务器：", hostInfo);
-};
+
 
 /**
  * 点击编辑 打开编辑子页面
@@ -45,6 +42,42 @@ const hostId = ref<string | undefined>(undefined);
 function clickDeleteHost(host_id: string) {
     hostDeleteStatus.value = true;
     hostId.value = host_id;
+}
+
+
+
+
+/**
+ * 双击打开终端
+ */
+import { terminalStore } from '@/stores/terminalStore';
+import { terminalLabelStore } from '@/stores/terminalLabelStore';
+import { SequenceUtil } from '@/utils/SequenceUtil';
+import TerminalLabel from '@/interfaces/TerminalInfo';
+
+/**
+ * 新建终端
+ */
+const { setTerminalStatus } = terminalStore()
+const { addTerminalLabel, setTerminalLabelStoreId } = terminalLabelStore();
+// 连接服务器
+function connectServer(hostInfo: HostInfo): void {
+    //打开终端界面
+    const terminalLabel: TerminalLabel = {
+        terminalId: SequenceUtil.nextId(),
+        terminalName: hostInfo.hostName,
+        terminalType: '1',
+        terminalIp: hostInfo.hostIp,
+        terminalPort: hostInfo.hostPort,
+        terminalUserName: hostInfo.hostUserName,
+        terminalPassword: hostInfo.hostPassword,
+    }
+    // 设置界面为终端界面
+    setTerminalStatus('terminal')
+    // 保存终端信息到store
+    addTerminalLabel(terminalLabel);
+    // 设置当前终端的storeId  (选中标签)
+    setTerminalLabelStoreId(terminalLabel.terminalId)
 }
 </script>
 

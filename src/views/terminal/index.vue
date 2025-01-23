@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import TerminalLabel from '@/interfaces/TerminalInfo';
 import { terminalLabelStore } from '@/stores/terminalLabelStore';
 import Terminal from './templates/terminal.vue';
+import SshTerminal from './templates/sshTerminal.vue';
 const { terminalLabelStoreMap, terminalLabelStoreId } = storeToRefs(terminalLabelStore());
 const { forEachTerminalLabel, getTerminalLabelStoreId } = terminalLabelStore();
 
@@ -23,9 +24,10 @@ watch(terminalLabelStoreId, () => {
 
 <template>
     <div id="terminal-view">
-        <KeepAlive>
-            <Terminal v-for="(terminalLabel) in terminalLabelList" :key="terminalLabel.terminalId"
-                v-show="terminalLabel.terminalId === terminalLabelId" />
+        <KeepAlive v-for="terminalLabel in terminalLabelList" :key="terminalLabel.terminalId"
+            v-show="terminalLabel.terminalId === terminalLabelId">
+            <Terminal v-if="terminalLabel.terminalType === '0'" />
+            <SshTerminal v-else-if="terminalLabel.terminalType === '1'" :connectInfo="terminalLabel" />
         </KeepAlive>
     </div>
 </template>

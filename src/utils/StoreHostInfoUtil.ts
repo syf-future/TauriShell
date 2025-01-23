@@ -1,17 +1,28 @@
-/**
- * 缓存工具类
- */
 import HostInfo from '@/interfaces/HostInfo';
 import { Store } from '@tauri-apps/plugin-store';
-const store = await Store.load('store.json');
 
 class StoreHostInfoUtil {
-    private static async setStore(key: string, value: any) {
-        await store.set(key, value);
-        await store.save();
+    // 将 store 放到类中，避免顶层 await
+    private static store: Store;
+
+    // 异步初始化 store
+    private static async initializeStore() {
+        if (!this.store) {
+            this.store = await Store.load('store.json');
+        }
     }
+
+    // 存储缓存数据
+    private static async setStore(key: string, value: any) {
+        await this.initializeStore(); // 确保 store 已初始化
+        await this.store.set(key, value);
+        await this.store.save();
+    }
+
+    // 获取缓存数据
     private static async getStore(key: string) {
-        return await store.get(key);
+        await this.initializeStore(); // 确保 store 已初始化
+        return await this.store.get(key);
     }
 
     /**
@@ -23,15 +34,16 @@ class StoreHostInfoUtil {
         if (hostInfos) {
             return hostInfos as HostInfo[]; // 类型断言，告诉 TS 返回的是 HostInfo[]
         }
-        return []
+        return [];
     }
 
     /**
-     * 设置组信息缓存
-     * @param HostInfos 
+     * 设置主机信息缓存
+     * @param hostInfos 
      */
     static setHostInfoStore(hostInfos: HostInfo[]) {
         this.setStore('Hosts-INFO', hostInfos);
     }
 }
-export { StoreHostInfoUtil }
+
+export { StoreHostInfoUtil };

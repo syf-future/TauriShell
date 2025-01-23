@@ -1,3 +1,4 @@
+use crate::interfaces::message_data::HostInfo;
 use async_trait::async_trait;
 use russh::client::Handle;
 use russh::keys::*;
@@ -12,11 +13,14 @@ pub struct SshTerminal {
 }
 
 impl SshTerminal {
-    pub async fn new(sender: mpsc::Sender<String>) -> Result<SshTerminal, Box<dyn Error>> {
-        let host = "8.153.66.250".to_string();
-        let port = 22;
-        let username = "root".to_string();
-        let password = "loan!1234".to_string();
+    pub async fn new(
+        sender: mpsc::Sender<String>,
+        host_info: HostInfo,
+    ) -> Result<SshTerminal, Box<dyn Error>> {
+        let host = host_info.ip;
+        let port = host_info.port;
+        let username = host_info.username;
+        let password = host_info.password;
         let addrs = (host, port);
 
         let config = client::Config {
@@ -37,14 +41,13 @@ impl SshTerminal {
 
         // 启动交互式 shell
         let mut channel = session.channel_open_session().await?;
-        let (w, h) = (40, 30); // 获取终端尺寸
+        let (w, h) = (1000, 750); // 获取终端尺寸
 
         channel
             .request_pty(false, "xterm".into(), w as u32, h as u32, 0, 0, &[])
             .await?;
-
-        channel.exec(true, "bash -i").await?;
-
+        // channel.exec(true, "cat /etc/motd").await?; // 加载欢迎语句
+        channel.exec(true, "bash -i").await?;       // 启动了一个交互式 Bash shell
         let session = Arc::new(Mutex::new(session));
 
         // 创建输入和输出的 MPSC 通道
@@ -76,8 +79,10 @@ impl SshTerminal {
                             // 处理命令退出状态
                             ChannelMsg::ExitStatus { exit_status } => {
                                 println!("命令退出状态：{}", exit_status);
-                                // stdin_closed = true;
                             },
+                            ChannelMsg::Success =>{
+                                let _ = sender.try_send("SUCCESS".to_string());
+                            }
                             // 其他未处理的消息
                             _ => {
                                 eprintln!("收到未处理的消息：{:?}", msg); // 捕获并打印未处理的消息
@@ -111,7 +116,7 @@ impl SshTerminal {
             .send("CLOSE-SSH".to_string())
             .await
             .expect("执行命令失败");
-        let mut session = self.session.lock().await;
+        let session = self.session.lock().await;
         session
             .disconnect(Disconnect::ByApplication, "", "Chinese")
             .await

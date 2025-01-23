@@ -3,6 +3,8 @@ use crate::terminal::ssh_terminal::SshTerminal;
 
 mod server;
 mod terminal;
+mod interfaces;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)

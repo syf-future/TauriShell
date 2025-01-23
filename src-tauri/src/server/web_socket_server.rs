@@ -2,23 +2,13 @@ use crate::terminal::local_terminal::LocalTerminal;
 use crate::terminal::ssh_terminal::SshTerminal;
 use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc; // 用于通道通信
 use tokio::sync::Mutex;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
-// 引入 Mutex 来实现共享访问
-
-// 定义一个结构体与客户端发送的 JSON 数据匹配
-#[derive(Serialize, Deserialize, Debug)]
-struct MessageData {
-    // 消息类型
-    message_type: String,
-    // 消息内容
-    message_info: String,
-}
+use crate::interfaces::message_data::MessageData;
 pub async fn start() {
     // 创建一个 TcpListener，绑定到 127.0.0.1:9001 地址，监听进入的 TCP 连接
     let listener = TcpListener::bind("127.0.0.1:9001").await.unwrap();
@@ -74,8 +64,7 @@ pub async fn start() {
                                                     if local_terminal.is_none() {
                                                         // 创建终端并传入发送端
                                                         local_terminal = Some(
-                                                            LocalTerminal::new(tx.clone())
-                                                                .expect("启动终端异常"),
+                                                            LocalTerminal::new(tx.clone()).expect("启动终端异常"),
                                                         );
                                                         if let Some(t) = &mut local_terminal {
                                                             t.execute_command("");
@@ -84,12 +73,20 @@ pub async fn start() {
                                                 }
                                                 "SSH" => {
                                                     println!("开始连接ssh远程服务器");
+                                                    let connect_info = message_data.connect_info;
                                                     if ssh_terminal.is_none() {
-                                                        ssh_terminal = Some(
-                                                            SshTerminal::new(tx.clone())
-                                                                .await
-                                                                .expect("连接ssh服务器异常"),
-                                                        );
+                                                        let mut error_msg: String = "".to_string();
+                                                        match SshTerminal::new(tx.clone(), connect_info.unwrap()).await {
+                                                            Ok(new_terminal) => {
+                                                                ssh_terminal = Some(new_terminal);
+                                                                println!("SSH 连接成功！");
+                                                            }
+                                                            Err(e) => {
+                                                                error_msg = e.to_string();
+                                                                eprintln!("SSH 连接失败: {}", e);
+                                                            }
+                                                        }
+                                                        ws_sender.lock().await.send(Message::from(error_msg)).await.expect("");
                                                     }
                                                 }
                                                 _ => {}

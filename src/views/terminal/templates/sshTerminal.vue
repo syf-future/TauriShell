@@ -4,12 +4,20 @@ import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css'; // 引入xterm样式
 import { EnumCommand } from "@/enums/EnumCommand";
 import CommandInfo from '@/interfaces/CommandInfo';
+import TerminalInfo from '@/interfaces/TerminalInfo';
+
+// 接收父组件传来的数据
+const props = defineProps<{
+    connectInfo: TerminalInfo;
+}>();
+const { connectInfo } = props;
+
 const terminalContainer = ref<HTMLDivElement | null>(null);
 const term = ref<Terminal | null>(null);
 const socket = ref<WebSocket | null>(null);
 let inputBuffer = ''; // 用于存储输入的数据
 let cursorPosition = 0; // 光标位置
-
+let lastMessage = '';
 function calculateTerminalSize(container: HTMLElement, fontSize: number): { cols: number; rows: number } {
     // 假设单个字符的宽度为 fontSize * 0.6，高度为 fontSize * 1.2
     const charWidth = fontSize * 0.6;
@@ -63,14 +71,22 @@ onMounted(() => {
         resizeTerminal()
 
         // 连接 WebSocket
-        console.log("开始连接服务端");
+        let data = `开始连接服务器: ${connectInfo.terminalIp}:${connectInfo.terminalPort}`;
+        term.value.writeln(data)
+        socket.value = new WebSocket(`ws://${connectInfo.terminalIp}:${connectInfo.terminalPort}`);
         socket.value = new WebSocket('ws://localhost:9001');
         socket.value.onopen = () => {
             console.log('WebSocket connected');
             const commandInfo: CommandInfo = {
                 message_type: EnumCommand.CONNECT,
-                message_info: "LOCAL",
-                connect_info: null
+                message_info: "SSH",
+                connect_info: {
+                    ip: connectInfo.terminalIp,
+                    port: connectInfo.terminalPort,
+                    username: connectInfo.terminalUserName,
+                    password: connectInfo.terminalPassword,
+                    connect_type: connectInfo.terminalType
+                }
             }
             socket.value?.send(JSON.stringify(commandInfo)); // 发送连接命令
         };
@@ -78,19 +94,27 @@ onMounted(() => {
         // 从 WebSocket 接收数据并显示在终端
         socket.value.onmessage = (event) => {
             if (term.value) {
-                // 判断数据是否为错误信息
-                if (event.data.startsWith("[ERROR]")) {
-                    const errorMsg = event.data.replace("[ERROR]", "");
-                    term.value.writeln('\x1b[38;5;210m' + errorMsg + '\x1b[39m'); // 红色显示错误信息
-                } else {
-                    term.value.writeln(event.data); // 正常显示数据
+                console.log("发送的数据：" + lastMessage);
+                console.log("接收到数据：" + event.data);
+                console.log(lastMessage == event.data.trim());
+
+                if (event.data === "SUCCESS") {
+                    term.value.writeln("连接成功"); // 正常显示数据
+                    return
+                }
+
+                if (lastMessage === event.data.slice(0, lastMessage.length)) {
+                    term.value.write(event.data.slice(lastMessage.length)); // 正常显示数据
+                    return
+                }
+                if (lastMessage !== event.data.trim()) {
+                    term.value.write(event.data); // 正常显示数据
                 }
             }
         };
 
         // 终端输入逻辑
         term.value.onData((data) => {
-            console.log("输入：" + data);
             switch (data) {
                 case '\x1b[A': // 上箭头
                     break;
@@ -116,11 +140,12 @@ onMounted(() => {
                     }
                     if (inputBuffer.trim()) {
                         commandInfo.message_info = inputBuffer;
+                        lastMessage = inputBuffer
                         inputBuffer = ''; // 清空输入缓冲区
                         cursorPosition = 0; // 光标位置归零
                     }
+
                     socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
-                    term.value?.write('\r\n'); // 换行
                     break;
                 case '\u007f': // 退格
                     inputBuffer = inputBuffer.slice(0, -1); // 删除缓冲区中的最后一个字符

@@ -15,11 +15,7 @@ declare module 'vue' {
     ElInput: typeof import('element-plus/es')['ElInput']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElSelect: typeof import('element-plus/es')['ElSelect']
-    ElTable: typeof import('element-plus/es')['ElTable']
-    ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
-    HostConnect: typeof import('./src/templates/HostConnectTemplate.vue')['default']
-    HostConnectTemplate: typeof import('./src/templates/HostConnectTemplate.vue')['default']
     Icons: typeof import('./src/components/icons.vue')['default']
     MessagePop: typeof import('./src/components/messagePop.vue')['default']
   }

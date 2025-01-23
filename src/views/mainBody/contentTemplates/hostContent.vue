@@ -2,34 +2,37 @@
 import CustomButton from '@/templates/CustomButton.vue';
 import GroupsTemplate from '@/templates/GroupsTemplate.vue';
 import { SequenceUtil } from '@/utils/SequenceUtil'
-import { terminalStore } from '@/stores/terminalStore';
 import HostsTemplate from '@/templates/HostsTemplate.vue';
-const { setTerminalStatus } = terminalStore()
 import TerminalLabel from '@/interfaces/TerminalInfo';
-import { terminalLabelStore } from '@/stores/terminalLabelStore';
 import { ref, onBeforeMount } from 'vue';
 import HostConnectTemplate from '@/templates/HostConnectTemplate.vue';
 import { storeToRefs } from 'pinia';
 import { hostInfosStore } from '@/stores/hostInfosStore';
 import { groupInfosStore } from '@/stores/groupInfosStore';
 const { addGroupInfo } = groupInfosStore();
+import { terminalStore } from '@/stores/terminalStore';
+import { terminalLabelStore } from '@/stores/terminalLabelStore';
 /**
  * 新建终端
  */
+const { setTerminalStatus } = terminalStore()
 const { addTerminalLabel, setTerminalLabelStoreId } = terminalLabelStore();
 const onNewTermial = () => {
     //打开终端界面
-    setTerminalStatus('terminal')
     const terminalLabel: TerminalLabel = {
         terminalId: SequenceUtil.nextId(),
         terminalName: 'Local Terminal',
         terminalType: '0',
         terminalIp: '',
-        terminalPort: '',
+        terminalPort: null,
         terminalUserName: '',
         terminalPassword: ''
     }
+    // 设置界面为终端界面
+    setTerminalStatus('terminal')
+    // 保存终端信息到store
     addTerminalLabel(terminalLabel);
+    // 设置当前终端的storeId  (选中标签)
     setTerminalLabelStoreId(terminalLabel.terminalId)
 }
 
