@@ -15,9 +15,11 @@ const { connectInfo } = props;
 const terminalContainer = ref<HTMLDivElement | null>(null);
 const term = ref<Terminal | null>(null);
 const socket = ref<WebSocket | null>(null);
-let inputBuffer = ''; // 用于存储输入的数据
-let cursorPosition = 0; // 光标位置
-let lastMessage = '';  // 用于判断是否重复显示数据
+let inputBuffer = '';       // 用于存储输入的数据
+let cursorPosition = 0;     // 光标位置
+let lastMessage = '';       // 用于判断是否重复显示数据
+let commandMode = '';       // 当前的命令模式(vim/less/tail)
+let modeIsStarted = false;  // 命令模式是否开始
 function calculateTerminalSize(container: HTMLElement, fontSize: number): { cols: number; rows: number } {
     // 假设单个字符的宽度为 fontSize * 0.6，高度为 fontSize * 1.2
     const charWidth = fontSize * 0.6;
@@ -96,13 +98,14 @@ onMounted(() => {
                     term.value.writeln("连接成功"); // 正常显示数据
                     return
                 }
+                let backDate = event.data;
                 // 判断返回数据是否重复
                 if (lastMessage === event.data.slice(0, lastMessage.length)) {
-                    term.value.write(event.data.slice(lastMessage.length)); // 正常显示数据
-                    return
+                    backDate = event.data.slice(lastMessage.length)
                 }
-                if (lastMessage !== event.data.trim()) {
-                    term.value.write(event.data); // 正常显示数据
+                if (lastMessage !== backDate) {
+                    checkMode(backDate);
+                    term.value.write(backDate); // 正常显示数据
                 }
             }
         };
@@ -114,7 +117,9 @@ onMounted(() => {
                 message_info: "",
                 connect_info: null
             }
-
+            if(modeIsStarted){
+                handleModeInput(data);
+            }
             // 处理输入
             switch (data) {
                 case '\x1b[A': // 上箭头
@@ -138,6 +143,7 @@ onMounted(() => {
                     lastMessage = inputBuffer
                     inputBuffer = ''; // 清空输入缓冲区
                     cursorPosition = 0; // 光标位置归零
+                    estimateMode(inputBuffer); // 判断命令模式
                     socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
                     break;
                 case '\u007f': // 退格
@@ -201,7 +207,7 @@ onMounted(() => {
         });
     }
 });
-
+// 删除指定位置的字符
 function updateInputDate(inputBuffer: string, index: number): string {
     console.log(index);
     console.log(inputBuffer.length);
@@ -221,6 +227,7 @@ function updateInputDate(inputBuffer: string, index: number): string {
     // 返回更新后的字符串
     return updatedBuffer;
 }
+// 添加字符
 function addInputDate(inputBuffer: string, addDate: string, index: number): string {
     // 使用 slice 来删除指定位置的字符
     const inputFront = inputBuffer.slice(0, index);
@@ -231,6 +238,38 @@ function addInputDate(inputBuffer: string, addDate: string, index: number): stri
     return updatedBuffer;
 }
 
+// 判断命令模式
+function estimateMode(input: string): void {
+    if (input.startsWith('vim')) {
+        commandMode = 'vim';
+        modeIsStarted = true;
+    } else if (input.startsWith('less')) {
+        commandMode = 'less';
+        modeIsStarted = true;
+    } else if (input.startsWith('tail')) {
+        commandMode = 'tail';
+        modeIsStarted = true;
+    } else {
+        commandMode = '';
+    }
+}
+// 校验命令模式
+function checkMode(output: string): void {
+    if (!modeIsStarted) {
+        return;
+    }
+    if (commandMode === 'less') {
+        const result = lastMessage.split('less')[1].trim();
+        if (output.trim() === (result + ': No such file or directory')) {
+            commandMode = '';
+            modeIsStarted = false;
+        }
+    }
+}
+// 处理模式的输入'
+function handleModeInput(input: string): void {
+    
+}
 </script>
 
 <template>

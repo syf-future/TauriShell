@@ -51,7 +51,6 @@ pub async fn start() {
                     Ok(msg) => {
                         match msg {
                             Message::Text(text) => {
-                                println!("收到客户端消息: {}", text);
                                 // 解析 JSON 字符串到 Rust 结构体
                                 match serde_json::from_str::<MessageData>(&text) {
                                     Ok(message_data) => {

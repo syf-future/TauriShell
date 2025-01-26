@@ -47,7 +47,7 @@ impl SshTerminal {
             .request_pty(false, "xterm".into(), w as u32, h as u32, 0, 0, &[])
             .await?;
         // channel.exec(true, "cat /etc/motd").await?; // 加载欢迎语句
-        channel.exec(true, "bash -i").await?;       // 启动了一个交互式 Bash shell
+        channel.exec(true, "bash -i").await?; // 启动了一个交互式 Bash shell
         let session = Arc::new(Mutex::new(session));
 
         // 创建输入和输出的 MPSC 通道
@@ -61,7 +61,6 @@ impl SshTerminal {
                         if command == "CLOSE-SSH" {
                             break; // 如果标准输入已关闭，退出循环
                         }
-                        println!("发送命令：{}", command);
                         // 发送命令到服务器
                         if let Err(e) = channel.data(format!("{}\n", command).as_bytes()).await {
                             eprintln!("发送命令失败：{}", e);
@@ -73,7 +72,7 @@ impl SshTerminal {
                         match msg {
                             ChannelMsg::Data { ref data } => {
                                 let out_data = String::from_utf8_lossy(&data);
-                                println!("返回数据：{}", out_data);
+                                println!("终端返回:{}", out_data);
                                 let _ = sender.try_send(out_data.to_string());
                             },
                             // 处理命令退出状态
@@ -131,7 +130,7 @@ impl SshTerminal {
         };
         let config = Arc::new(config);
         let sh = CustomClient {}; // 创建一个自定义客户端实例
-        // 尝试连接到 SSH 服务器
+                                  // 尝试连接到 SSH 服务器
         match client::connect(config, addrs, sh).await {
             Ok(mut session) => {
                 // 使用密码进行身份验证
