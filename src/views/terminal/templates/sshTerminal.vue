@@ -17,7 +17,7 @@ const term = ref<Terminal | null>(null);
 const socket = ref<WebSocket | null>(null);
 let inputBuffer = ''; // 用于存储输入的数据
 let cursorPosition = 0; // 光标位置
-let lastMessage = '';
+let lastMessage = '';  // 用于判断是否重复显示数据
 function calculateTerminalSize(container: HTMLElement, fontSize: number): { cols: number; rows: number } {
     // 假设单个字符的宽度为 fontSize * 0.6，高度为 fontSize * 1.2
     const charWidth = fontSize * 0.6;
@@ -35,8 +35,6 @@ function calculateTerminalSize(container: HTMLElement, fontSize: number): { cols
 }
 // 调整终端大小
 const resizeTerminal = () => {
-    console.log("开始执行");
-
     if (term.value && terminalContainer.value) {
         const { cols, rows } = calculateTerminalSize(terminalContainer.value, 16); // 16为字体大小
         term.value.resize(cols, rows); // 设置终端列数和行数
@@ -94,15 +92,11 @@ onMounted(() => {
         // 从 WebSocket 接收数据并显示在终端
         socket.value.onmessage = (event) => {
             if (term.value) {
-                console.log("发送的数据：" + lastMessage);
-                console.log("接收到数据：" + event.data);
-                console.log(lastMessage == event.data.trim());
-
                 if (event.data === "SUCCESS") {
                     term.value.writeln("连接成功"); // 正常显示数据
                     return
                 }
-
+                // 判断返回数据是否重复
                 if (lastMessage === event.data.slice(0, lastMessage.length)) {
                     term.value.write(event.data.slice(lastMessage.length)); // 正常显示数据
                     return
@@ -113,8 +107,15 @@ onMounted(() => {
             }
         };
 
-        // 终端输入逻辑
+        // 终端输入逻辑  
         term.value.onData((data) => {
+            const commandInfo: CommandInfo = {
+                message_type: EnumCommand.CHAT,
+                message_info: "",
+                connect_info: null
+            }
+
+            // 处理输入
             switch (data) {
                 case '\x1b[A': // 上箭头
                     break;
@@ -129,43 +130,107 @@ onMounted(() => {
                 case '\x1b[D': // 左箭头
                     if (cursorPosition > 0) {
                         cursorPosition--;    // 光标位置移动
-                        term.value?.write('\x1b[D'); // 显示输入的字符
+                        term.value?.write('\x1b[1D'); // 显示输入的字符
                     }
                     break;
                 case '\r':   // 回车
-                    const commandInfo: CommandInfo = {
-                        message_type: EnumCommand.CHAT,
-                        message_info: "",
-                        connect_info: null
-                    }
-                    if (inputBuffer.trim()) {
-                        commandInfo.message_info = inputBuffer;
-                        lastMessage = inputBuffer
-                        inputBuffer = ''; // 清空输入缓冲区
-                        cursorPosition = 0; // 光标位置归零
-                    }
-
+                    commandInfo.message_info = inputBuffer;
+                    lastMessage = inputBuffer
+                    inputBuffer = ''; // 清空输入缓冲区
+                    cursorPosition = 0; // 光标位置归零
                     socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
                     break;
                 case '\u007f': // 退格
-                    inputBuffer = inputBuffer.slice(0, -1); // 删除缓冲区中的最后一个字符
-                    term.value?.write('\b\b'); // 显示退格效果
+                    if (cursorPosition > 0) {
+                        // 当前字符长度
+                        let currentChar = inputBuffer.length;
+                        let inputDate = updateInputDate(inputBuffer, cursorPosition);
+                        console.log(`更新前的字符串：${inputBuffer},更新后的字符串：${inputDate}, 光标位置:${cursorPosition}`);
+                        // 光标向左移动 n 格
+                        term.value?.write(`\x1b[${cursorPosition}D`);
+                        // 输出 n 个空格，覆盖目标字符
+                        term.value?.write(' '.repeat(currentChar));
+                        // 光标再向左移动 n 格，回到原始位置
+                        term.value?.write(`\x1b[${currentChar}D`);
+                        // 写入数据
+                        term.value?.write(inputDate);
+                        // 光标再向左移动 n 格，回到原始位置
+                        console.log("光标左移动：", currentChar - cursorPosition);
+                        if (currentChar - cursorPosition > 0) {
+                            term.value?.write(`\x1b[${currentChar - cursorPosition}D`);
+                        }
+                        inputBuffer = inputDate
+                        cursorPosition--; // 光标位置移动
+                    }
+                    break;
+                case '\x03': // Ctrl + C
+                    console.log("检测到 Ctrl + C");
+                    commandInfo.message_info = data
+                    socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
                     break;
                 default:
-                    inputBuffer += data; // 添加输入到缓冲区
+                    // 当前字符长度
+                    let currentChar = inputBuffer.length;
+                    let inputDate = addInputDate(inputBuffer, data, cursorPosition);
+                    console.log(`更新前的字符串：${inputBuffer},更新后的字符串：${inputDate}, 光标位置:${cursorPosition}`);
+                    // 光标向左移动 n 格
+                    if (cursorPosition > 0) {
+                        term.value?.write(`\x1b[${cursorPosition}D`);
+                        // 输出 n 个空格，覆盖目标字符
+                        term.value?.write(' '.repeat(currentChar));
+                        // 光标再向左移动 n 格，回到原始位置
+                        term.value?.write(`\x1b[${currentChar}D`);
+                    }
+                    // 写入数据
+                    term.value?.write(inputDate);
+                    // 光标再向左移动 n 格，回到原始位置
+                    console.log("光标左移动：", currentChar - cursorPosition);
+                    if (currentChar - cursorPosition > 0) {
+                        term.value?.write(`\x1b[${currentChar - cursorPosition}D`);
+                    }
+                    inputBuffer = inputDate
                     cursorPosition += data.length; // 光标位置移动
-                    term.value?.write(data); // 显示输入的字符
                     break;
             }
         });
 
-        // 设置快捷键
+        // 快捷键
         term.value.onKey((event) => {
-            const char = event.key;
-            console.log("按下：" + char);
+            console.log(event);
+
         });
     }
 });
+
+function updateInputDate(inputBuffer: string, index: number): string {
+    console.log(index);
+    console.log(inputBuffer.length);
+
+    // 确保 index 在合理范围内
+    if (index < 0 || index > inputBuffer.length) {
+        // 如果 index 无效，返回原始字符串
+        return inputBuffer;
+    }
+    // 使用 slice 来删除指定位置的字符
+    const inputFront = inputBuffer.slice(0, index - 1);
+    const inputEnd = inputBuffer.slice(index);
+    console.log(`更新前的字符串：${inputBuffer},更新前的前半部分：${inputFront},更新前的后半部分：${inputEnd}`);
+
+    // 合并字符串
+    const updatedBuffer = inputBuffer.slice(0, index - 1) + inputBuffer.slice(index);
+    // 返回更新后的字符串
+    return updatedBuffer;
+}
+function addInputDate(inputBuffer: string, addDate: string, index: number): string {
+    // 使用 slice 来删除指定位置的字符
+    const inputFront = inputBuffer.slice(0, index);
+    const inputEnd = inputBuffer.slice(index);
+    // 合并字符串
+    const updatedBuffer = inputFront + addDate + inputEnd
+    // 返回更新后的字符串
+    return updatedBuffer;
+}
+
 </script>
 
 <template>
