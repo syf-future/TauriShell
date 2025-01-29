@@ -71,6 +71,7 @@ function connectServer(hostInfo: HostInfo): void {
         terminalPort: hostInfo.hostPort,
         terminalUserName: hostInfo.hostUserName,
         terminalPassword: hostInfo.hostPassword,
+        terminalIsSftp: false
     }
     // 设置界面为终端界面
     setTerminalStatus('terminal')

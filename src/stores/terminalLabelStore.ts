@@ -42,9 +42,18 @@ export const terminalLabelStore = defineStore("terminalLabelStore", () => {
         })
         return terminalLabelList;
     }
+    /**
+     * 修改终端信息
+     */
+    function updateTerminalLabel(terminalLabel: TerminalInfo): void {
+        const terminalId = terminalLabel.terminalId;
+        if (terminalLabelStoreMap.value.has(terminalId)) {
+            terminalLabelStoreMap.value.set(terminalId, terminalLabel);
+        }
+    }
     return {
         terminalLabelStoreMap, terminalLabelStoreId,
         setTerminalLabelStoreId, getTerminalLabelStoreId,
-        addTerminalLabel, deleteTerminalLabel, forEachTerminalLabel
+        addTerminalLabel, deleteTerminalLabel, forEachTerminalLabel, updateTerminalLabel
     }
 })

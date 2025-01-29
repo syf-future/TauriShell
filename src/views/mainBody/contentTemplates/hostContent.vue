@@ -26,7 +26,8 @@ const onNewTermial = () => {
         terminalIp: '',
         terminalPort: null,
         terminalUserName: '',
-        terminalPassword: ''
+        terminalPassword: '',
+        terminalIsSftp: false
     }
     // 设置界面为终端界面
     setTerminalStatus('terminal')

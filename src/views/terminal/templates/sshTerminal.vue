@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css'; // 引入xterm样式
 import { EnumCommand } from "@/enums/EnumCommand";
 import CommandInfo from '@/interfaces/CommandInfo';
 import TerminalInfo from '@/interfaces/TerminalInfo';
-
+import SftpTerminal from '@/views/terminal/templates/sftpTerminal.vue'
 // 接收父组件传来的数据
 const props = defineProps<{
     connectInfo: TerminalInfo;
@@ -14,43 +15,27 @@ const { connectInfo } = props;
 
 const terminalContainer = ref<HTMLDivElement | null>(null);
 const term = ref<Terminal | null>(null);
+const fitAddon = ref(new FitAddon());
 const socket = ref<WebSocket | null>(null);
+const resizeObserver = ref<ResizeObserver | null>(null);
 let inputBuffer = '';       // 用于存储输入的数据
 let cursorPosition = 0;     // 光标位置
 let lastMessage = '';       // 用于判断是否重复显示数据
 let commandMode = '';       // 当前的命令模式(vim/less/tail)
 let modeIsStarted = false;  // 命令模式是否开始
-function calculateTerminalSize(container: HTMLElement, fontSize: number): { cols: number; rows: number } {
-    // 假设单个字符的宽度为 fontSize * 0.6，高度为 fontSize * 1.2
-    const charWidth = fontSize * 0.6;
-    const charHeight = fontSize * 1.21;
+let isOnDate = false;       // 是否处于输入状态
 
-    // 获取容器宽高
-    let containerWidth = container.offsetWidth;
-    let containerHeight = container.offsetHeight;
-
-    // 计算列数和行数
-    const cols = Math.floor(containerWidth / charWidth);
-    const rows = Math.floor(containerHeight / charHeight);
-
-    return { cols, rows };
-}
-// 调整终端大小
-const resizeTerminal = () => {
-    if (term.value && terminalContainer.value) {
-        const { cols, rows } = calculateTerminalSize(terminalContainer.value, 16); // 16为字体大小
-        term.value.resize(cols, rows); // 设置终端列数和行数
-    }
-};
-
-// 监听窗口大小变化
-window.addEventListener('resize', resizeTerminal);
 
 // 清理监听器
 onUnmounted(() => {
-    window.removeEventListener('resize', resizeTerminal);
+    resizeObserver.value?.disconnect();
     socket.value?.close();
 });
+const commandInfo: CommandInfo = {
+    message_type: EnumCommand.CHAT,
+    message_info: "",
+    connect_info: null
+}
 // 初始化 xterm
 onMounted(() => {
     if (terminalContainer.value) {
@@ -66,14 +51,18 @@ onMounted(() => {
                 cursor: '#f8f8f8' // 光标颜色
             },
         });
+        term.value.loadAddon(fitAddon.value);
         term.value.open(terminalContainer.value);
-        //初始化终端大小
-        resizeTerminal()
+        fitAddon.value.fit();
+        resizeObserver.value = new ResizeObserver(() => {
+            if (fitAddon.value) {
+                fitAddon.value.fit();
+            }
+        });
 
+        resizeObserver.value.observe(terminalContainer.value);
         // 连接 WebSocket
-        let data = `开始连接服务器: ${connectInfo.terminalIp}:${connectInfo.terminalPort}`;
-        term.value.writeln(data)
-        socket.value = new WebSocket(`ws://${connectInfo.terminalIp}:${connectInfo.terminalPort}`);
+        term.value.writeln(`开始连接服务器: ${connectInfo.terminalIp}:${connectInfo.terminalPort}`)
         socket.value = new WebSocket('ws://localhost:9001');
         socket.value.onopen = () => {
             console.log('WebSocket connected');
@@ -105,6 +94,7 @@ onMounted(() => {
                 }
                 if (lastMessage !== backDate) {
                     checkMode(backDate);
+                    console.log(`接收到数据：${backDate}`);
                     term.value.write(backDate); // 正常显示数据
                 }
             }
@@ -112,13 +102,8 @@ onMounted(() => {
 
         // 终端输入逻辑  
         term.value.onData((data) => {
-            const commandInfo: CommandInfo = {
-                message_type: EnumCommand.CHAT,
-                message_info: "",
-                connect_info: null
-            }
-            if(modeIsStarted){
-                handleModeInput(data);
+            if (!isOnDate) {
+                return
             }
             // 处理输入
             switch (data) {
@@ -140,18 +125,20 @@ onMounted(() => {
                     break;
                 case '\r':   // 回车
                     commandInfo.message_info = inputBuffer;
-                    lastMessage = inputBuffer
+                    lastMessage = inputBuffer;
+                    if (!modeIsStarted) {
+                        estimateMode(inputBuffer); // 判断命令模式
+                    }
                     inputBuffer = ''; // 清空输入缓冲区
                     cursorPosition = 0; // 光标位置归零
-                    estimateMode(inputBuffer); // 判断命令模式
                     socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
+                    isOnDate = false;
                     break;
                 case '\u007f': // 退格
                     if (cursorPosition > 0) {
                         // 当前字符长度
                         let currentChar = inputBuffer.length;
                         let inputDate = updateInputDate(inputBuffer, cursorPosition);
-                        console.log(`更新前的字符串：${inputBuffer},更新后的字符串：${inputDate}, 光标位置:${cursorPosition}`);
                         // 光标向左移动 n 格
                         term.value?.write(`\x1b[${cursorPosition}D`);
                         // 输出 n 个空格，覆盖目标字符
@@ -161,7 +148,6 @@ onMounted(() => {
                         // 写入数据
                         term.value?.write(inputDate);
                         // 光标再向左移动 n 格，回到原始位置
-                        console.log("光标左移动：", currentChar - cursorPosition);
                         if (currentChar - cursorPosition > 0) {
                             term.value?.write(`\x1b[${currentChar - cursorPosition}D`);
                         }
@@ -178,7 +164,6 @@ onMounted(() => {
                     // 当前字符长度
                     let currentChar = inputBuffer.length;
                     let inputDate = addInputDate(inputBuffer, data, cursorPosition);
-                    console.log(`更新前的字符串：${inputBuffer},更新后的字符串：${inputDate}, 光标位置:${cursorPosition}`);
                     // 光标向左移动 n 格
                     if (cursorPosition > 0) {
                         term.value?.write(`\x1b[${cursorPosition}D`);
@@ -190,38 +175,33 @@ onMounted(() => {
                     // 写入数据
                     term.value?.write(inputDate);
                     // 光标再向左移动 n 格，回到原始位置
-                    console.log("光标左移动：", currentChar - cursorPosition);
                     if (currentChar - cursorPosition > 0) {
                         term.value?.write(`\x1b[${currentChar - cursorPosition}D`);
                     }
                     inputBuffer = inputDate
                     cursorPosition += data.length; // 光标位置移动
+                    isOnDate = false;
                     break;
             }
         });
 
         // 快捷键
         term.value.onKey((event) => {
-            console.log(event);
-
+            if (modeIsStarted) {
+                handleModeInput(event.key, commandMode)
+            } else {
+                isOnDate = true;
+            }
         });
     }
 });
 // 删除指定位置的字符
 function updateInputDate(inputBuffer: string, index: number): string {
-    console.log(index);
-    console.log(inputBuffer.length);
-
     // 确保 index 在合理范围内
     if (index < 0 || index > inputBuffer.length) {
         // 如果 index 无效，返回原始字符串
         return inputBuffer;
     }
-    // 使用 slice 来删除指定位置的字符
-    const inputFront = inputBuffer.slice(0, index - 1);
-    const inputEnd = inputBuffer.slice(index);
-    console.log(`更新前的字符串：${inputBuffer},更新前的前半部分：${inputFront},更新前的后半部分：${inputEnd}`);
-
     // 合并字符串
     const updatedBuffer = inputBuffer.slice(0, index - 1) + inputBuffer.slice(index);
     // 返回更新后的字符串
@@ -243,12 +223,15 @@ function estimateMode(input: string): void {
     if (input.startsWith('vim')) {
         commandMode = 'vim';
         modeIsStarted = true;
+        console.log(`命令模式：${commandMode}`);
     } else if (input.startsWith('less')) {
         commandMode = 'less';
         modeIsStarted = true;
+        console.log(`命令模式：${commandMode}`);
     } else if (input.startsWith('tail')) {
         commandMode = 'tail';
         modeIsStarted = true;
+        console.log(`命令模式：${commandMode}`);
     } else {
         commandMode = '';
     }
@@ -259,29 +242,89 @@ function checkMode(output: string): void {
         return;
     }
     if (commandMode === 'less') {
-        const result = lastMessage.split('less')[1].trim();
-        if (output.trim() === (result + ': No such file or directory')) {
-            commandMode = '';
-            modeIsStarted = false;
+        try {
+            const result = lastMessage.split('less')[1].trim();
+            if (output.trim() === (result + ': No such file or directory')) {
+                commandMode = '';
+                modeIsStarted = false;
+            }
+        } catch (e) {
         }
     }
 }
 // 处理模式的输入'
-function handleModeInput(input: string): void {
-    
+function handleModeInput(input: string, mode: string): void {
+    console.log(`处理模式输入：${input} ${mode}`);
+    if (mode === 'vim') {
+        commandInfo.message_info = input;
+        socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
+        isOnDate = false;
+        return;
+    }
+    if (mode === 'less') {
+        if (lastMessage.startsWith('/')) {
+            if (input === 'n' || input === 'N') {
+                commandInfo.message_info = input;
+                socket.value?.send(JSON.stringify(commandInfo)); // 发送输入缓冲区的内容
+                isOnDate = false;
+                return;
+            }
+        }
+    }
+    isOnDate = true;
 }
+const sftpHeight = ref(600); // 默认 400px
+// 计算容器高度
+const containerHeight = computed(() => {
+    console.log("是否显示sftp：", connectInfo.terminalIsSftp);
+
+    if (connectInfo.terminalIsSftp === true) {
+        console.log(100 - 50);
+        fitAddon.value.fit();
+        return `calc(100% - ${sftpHeight.value}px)`;
+    }
+    console.log(100);
+    fitAddon.value.fit();
+    return `calc(100%)`;
+
+});
 </script>
 
 <template>
-    <div ref="terminalContainer" class="terminalStyle"></div>
+    <div id="sshTerminal">
+        <div ref="terminalContainer" class="terminalStyle" :style="{ height: containerHeight }"></div>
+        <div class="terminal-sftp" :style="{ height: sftpHeight + 'px' }" v-if="connectInfo.terminalIsSftp === true">
+            <div class="control-panel"></div>
+            <SftpTerminal />
+        </div>
+    </div>
+
 </template>
 
 <style lang="scss" scoped>
-.terminalStyle {
+#sshTerminal {
     width: 100%;
     height: 100%;
-    padding: 5px;
-    box-sizing: border-box;
-    overflow: auto;
+}
+
+
+
+.terminalStyle {
+    width: 100%;
+}
+
+.terminal-sftp {
+    width: 100%;
+    background-color: rgb(91, 90, 89);
+
+    .control-panel {
+        width: 100%;
+        height: 3px;
+
+        &:hover {
+            background-color: rgb(181, 183, 182);
+            cursor: ns-resize;
+        }
+    }
 }
 </style>

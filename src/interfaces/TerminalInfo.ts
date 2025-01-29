@@ -6,5 +6,6 @@ interface TerminalInfo {
     terminalPort: number | null;       // 远程终端端口
     terminalUserName: string;   // 远程终端用户名
     terminalPassword: string;   // 远程终端密码
+    terminalIsSftp: boolean;    // 是否打开SFTP功能
 }
 export default TerminalInfo;

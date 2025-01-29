@@ -41,10 +41,10 @@ impl SshTerminal {
 
         // 启动交互式 shell
         let mut channel = session.channel_open_session().await?;
-        let (w, h) = (1000, 750); // 获取终端尺寸
+        let (w, h) = (100, 50); // 获取终端尺寸
 
         channel
-            .request_pty(false, "xterm".into(), w as u32, h as u32, 0, 0, &[])
+            .request_pty(false, "xterm".into(), w as u32, h as u32, 1300, 750, &[])
             .await?;
         // channel.exec(true, "cat /etc/motd").await?; // 加载欢迎语句
         channel.exec(true, "bash -i").await?; // 启动了一个交互式 Bash shell
@@ -72,7 +72,7 @@ impl SshTerminal {
                         match msg {
                             ChannelMsg::Data { ref data } => {
                                 let out_data = String::from_utf8_lossy(&data);
-                                println!("终端返回:{}", out_data);
+                                // println!("终端返回:{}", out_data);
                                 let _ = sender.try_send(out_data.to_string());
                             },
                             // 处理命令退出状态

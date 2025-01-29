@@ -3,10 +3,9 @@ import SvgIcon from '@/components/icons.vue';
 import { ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import TerminalLabel from '@/interfaces/TerminalInfo';
+const { terminalLabelStoreMap, terminalLabelStoreId } = storeToRefs(terminalLabelStore());
 import { terminalLabelStore } from '@/stores/terminalLabelStore';
-const { terminalLabelStoreMap } = storeToRefs(terminalLabelStore());
-const { terminalLabelStoreId } = storeToRefs(terminalLabelStore());
-const { forEachTerminalLabel, deleteTerminalLabel, getTerminalLabelStoreId, setTerminalLabelStoreId } = terminalLabelStore();
+const { forEachTerminalLabel, deleteTerminalLabel, getTerminalLabelStoreId, setTerminalLabelStoreId, updateTerminalLabel } = terminalLabelStore();
 import { terminalStore } from '@/stores/terminalStore';
 const { setTerminalStatus } = terminalStore()
 
@@ -48,18 +47,14 @@ function closeTerminalLabel(terminalId: string): void {
     }
 }
 
-
 //点击sftp
-// import { invoke } from '@tauri-apps/api/core';
 function clickSftpLabel(): void {
-    // invoke('local_terminal', { command: 'pwd', terminalId:'0'})
-    //     .then((res) => {
-    //         console.log('调用成功');
-    //         console.log(res)
-    //     }).catch((err) => {
-    //         console.log('调用失败')
-    //         console.log(err)
-    //     })
+    console.log("点击SFTP");
+    const terminalInfo = terminalLabelStoreMap.value.get(terminalLabelId.value);
+    if (terminalInfo) {
+        terminalInfo.terminalIsSftp = !terminalInfo.terminalIsSftp;
+        updateTerminalLabel(terminalInfo);
+    }
 }
 </script>
 
