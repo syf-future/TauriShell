@@ -1,9 +1,33 @@
 <script setup lang="ts">
 import { Search } from '@element-plus/icons-vue'
 import SvgIcon from '@/components/icons.vue';
-import { ref } from 'vue';
+import { ref, onBeforeMount } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import TerminalInfo from '@/interfaces/TerminalInfo';
+const props = defineProps<{
+    connectInfo: TerminalInfo;
+}>();
+const { connectInfo } = props;
 
-const directory = ref('');
+const directory = ref('/');
+const command = ref('');
+onBeforeMount(() => {
+    command.value = `cd ${directory.value}; ls -l`;
+    console.log("开始发送命令：", command.value);
+
+    invoke('is_connect', {
+        ip: connectInfo.terminalIp,
+        port: connectInfo.terminalPort,
+        username: connectInfo.terminalUserName,
+        password: connectInfo.terminalPassword,
+        command: command.value
+    }).then((res) => {
+        console.log(res);
+    })
+        .catch((e) => {
+            console.log(e);
+        });
+})
 </script>
 
 <template>
@@ -92,7 +116,7 @@ const directory = ref('');
         align-items: center;
 
         .icon-item {
-            margin-left: 10px;
+            margin-left: 5px;
             width: 32px;
             height: 32px;
             border-radius: 10px;

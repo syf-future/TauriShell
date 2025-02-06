@@ -295,7 +295,7 @@ const containerHeight = computed(() => {
         <div ref="terminalContainer" class="terminalStyle" :style="{ height: containerHeight }"></div>
         <div class="terminal-sftp" :style="{ height: sftpHeight + 'px' }" v-if="connectInfo.terminalIsSftp === true">
             <div class="control-panel"></div>
-            <SftpTerminal />
+            <SftpTerminal :connectInfo="connectInfo" />
         </div>
     </div>
 
@@ -322,7 +322,7 @@ const containerHeight = computed(() => {
         height: 3px;
 
         &:hover {
-            background-color: rgb(181, 183, 182);
+            background-color: rgb(94, 175, 133);
             cursor: ns-resize;
         }
     }
